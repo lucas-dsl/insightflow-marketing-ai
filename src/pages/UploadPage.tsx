@@ -1,4 +1,4 @@
-import { useCallback, useMemo, useState } from "react";
+﻿import { useCallback, useMemo, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   AlertCircle,
@@ -61,6 +61,51 @@ const PreviewTable = ({ preview }: { preview: CsvPreview }) => (
   </div>
 );
 
+const PreviewModal = ({
+  onClose,
+  preview,
+}: {
+  onClose: () => void;
+  preview: CsvPreview;
+}) => (
+  <motion.div
+    initial={{ opacity: 0 }}
+    animate={{ opacity: 1 }}
+    exit={{ opacity: 0 }}
+    className="fixed inset-0 z-50 flex items-center justify-center bg-background/80 p-4 backdrop-blur-sm"
+    onClick={onClose}
+  >
+    <motion.div
+      initial={{ opacity: 0, y: 16, scale: 0.98 }}
+      animate={{ opacity: 1, y: 0, scale: 1 }}
+      exit={{ opacity: 0, y: 8, scale: 0.98 }}
+      transition={{ duration: 0.18 }}
+      className="max-h-[85vh] w-full max-w-5xl space-y-4 overflow-hidden rounded-3xl border border-border bg-background p-4 shadow-2xl"
+      onClick={(event) => event.stopPropagation()}
+    >
+      <div className="flex items-start justify-between gap-4">
+        <div>
+          <p className="text-sm font-semibold text-foreground">Visualizacao do CSV</p>
+          <p className="mt-1 text-xs text-muted-foreground">
+            Confira uma amostra validada antes de importar o exemplo.
+          </p>
+        </div>
+        <button
+          type="button"
+          onClick={onClose}
+          className="rounded-xl border border-border px-3 py-2 text-xs font-medium text-foreground transition-colors hover:bg-secondary"
+        >
+          Fechar
+        </button>
+      </div>
+
+      <div className="max-h-[68vh] overflow-auto">
+        <PreviewTable preview={preview} />
+      </div>
+    </motion.div>
+  </motion.div>
+);
+
 export const UploadPage = () => {
   const navigate = useNavigate();
   const {
@@ -74,6 +119,7 @@ export const UploadPage = () => {
   } = useAppState();
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [examplePreview, setExamplePreview] = useState<CsvPreview | null>(null);
+  const [isExamplePreviewOpen, setIsExamplePreviewOpen] = useState(false);
   const [preview, setPreview] = useState<CsvPreview | null>(null);
   const [state, setState] = useState<UploadState>("idle");
 
@@ -92,6 +138,7 @@ export const UploadPage = () => {
       setSelectedChannel(null);
       setPreview(buildCsvPreview(parsed));
       setExamplePreview(null);
+      setIsExamplePreviewOpen(false);
       setErrorMessage(null);
       setState("success");
     },
@@ -150,6 +197,7 @@ export const UploadPage = () => {
     setSelectedChannel(null);
     setPreview(null);
     setExamplePreview(null);
+    setIsExamplePreviewOpen(false);
     setErrorMessage(null);
     setState("idle");
   };
@@ -167,6 +215,7 @@ export const UploadPage = () => {
     }
 
     setExamplePreview(buildCsvPreview(parsed));
+    setIsExamplePreviewOpen(true);
   };
 
   const handleImportExample = async (example: ExampleCsvFile) => {
@@ -262,7 +311,7 @@ export const UploadPage = () => {
               <div>
                 <p className="text-sm font-medium text-foreground">Importacao concluida</p>
                 <p className="mt-0.5 text-xs text-muted-foreground">
-                  {importedRows.length.toLocaleString()} linhas � {activePreview?.columns.length ?? 0} colunas
+                  {importedRows.length.toLocaleString()} linhas • {importedSummary.columns} colunas
                 </p>
               </div>
             </div>
@@ -278,8 +327,6 @@ export const UploadPage = () => {
                 Os dados foram salvos no estado global e ja alimentam Dashboard e Insights automaticamente.
               </p>
             </div>
-
-            {activePreview ? <PreviewTable preview={activePreview} /> : null}
 
             <button
               type="button"
@@ -351,8 +398,6 @@ export const UploadPage = () => {
           ))}
         </div>
 
-        {activePreview && state !== "success" ? <PreviewTable preview={activePreview} /> : null}
-
         {state === "idle" && !hasImportedData ? (
           <div className="rounded-2xl border border-border bg-card p-4">
             <p className="text-sm font-medium text-foreground">Nenhum dado interno carregado</p>
@@ -362,6 +407,15 @@ export const UploadPage = () => {
           </div>
         ) : null}
       </div>
+
+      <AnimatePresence>
+        {examplePreview && isExamplePreviewOpen ? (
+          <PreviewModal
+            preview={examplePreview}
+            onClose={() => setIsExamplePreviewOpen(false)}
+          />
+        ) : null}
+      </AnimatePresence>
     </section>
   );
 };

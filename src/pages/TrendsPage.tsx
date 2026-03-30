@@ -11,11 +11,13 @@ import {
 } from "@/services/trendsService";
 
 const trafficFormatter = new Intl.NumberFormat("pt-BR");
+const PAGE_SIZE = 10;
 
 export const TrendsPage = () => {
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [trends, setTrends] = useState<Trend[]>([]);
+  const [visibleCount, setVisibleCount] = useState(PAGE_SIZE);
 
   const loadTrends = async (forceRefresh = false) => {
     setIsLoading(true);
@@ -26,6 +28,7 @@ export const TrendsPage = () => {
         ? await refreshMarketTrends()
         : await getMarketTrends();
       setTrends(nextTrends);
+      setVisibleCount(PAGE_SIZE);
     } catch {
       setErrorMessage("Nao foi possivel atualizar as tendencias agora.");
     } finally {
@@ -36,6 +39,9 @@ export const TrendsPage = () => {
   useEffect(() => {
     void loadTrends();
   }, []);
+
+  const visibleTrends = trends.slice(0, visibleCount);
+  const hasMoreTrends = visibleCount < trends.length;
 
   return (
     <section className="screen-container">
@@ -90,7 +96,7 @@ export const TrendsPage = () => {
             </p>
           </div>
         ) : (
-          trends.map((trend, index) => (
+          visibleTrends.map((trend, index) => (
             <motion.article
               key={trend.keyword}
               initial={{ opacity: 0, x: -12 }}
@@ -114,6 +120,16 @@ export const TrendsPage = () => {
           ))
         )}
       </div>
+
+      {!isLoading && hasMoreTrends ? (
+        <button
+          type="button"
+          onClick={() => setVisibleCount((current) => current + PAGE_SIZE)}
+          className="rounded-xl border border-border bg-card px-4 py-3 text-sm font-medium text-foreground transition-colors hover:bg-secondary"
+        >
+          Ver mais
+        </button>
+      ) : null}
     </section>
   );
 };

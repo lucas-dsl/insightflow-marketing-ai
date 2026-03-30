@@ -12,6 +12,9 @@ const fallbackTrends: Trend[] = mockTrends.map((trend) => ({
   source: "serpapi",
 }));
 
+const sortTrendsByTraffic = (trends: Trend[]) =>
+  [...trends].sort((left, right) => right.traffic - left.traffic);
+
 let cachedTrends: Trend[] | null = null;
 let cachedAt = 0;
 
@@ -38,7 +41,7 @@ const fetchMarketTrends = async (): Promise<Trend[]> => {
     console.warn(
       "[trendsService] Supabase nao configurado. Usando fallback local de tendencias.",
     );
-    return fallbackTrends;
+    return sortTrendsByTraffic(fallbackTrends);
   }
 
   let response: Response;
@@ -52,7 +55,7 @@ const fetchMarketTrends = async (): Promise<Trend[]> => {
     });
   } catch (error) {
     console.warn("[trendsService] Erro de rede ao chamar a Edge Function.", error);
-    return fallbackTrends;
+    return sortTrendsByTraffic(fallbackTrends);
   }
 
   if (!response.ok) {
@@ -60,7 +63,7 @@ const fetchMarketTrends = async (): Promise<Trend[]> => {
       status: response.status,
       statusText: response.statusText,
     });
-    return fallbackTrends;
+    return sortTrendsByTraffic(fallbackTrends);
   }
 
   const payload = (await response.json()) as Trend[];
@@ -77,7 +80,7 @@ const fetchMarketTrends = async (): Promise<Trend[]> => {
         source: response.headers.get("X-Market-Trends-Source"),
       },
     );
-    return fallbackTrends;
+    return sortTrendsByTraffic(fallbackTrends);
   }
 
   if (response.headers.get("X-Market-Trends-Fallback") === "true") {
@@ -87,7 +90,7 @@ const fetchMarketTrends = async (): Promise<Trend[]> => {
     });
   }
 
-  return trends;
+  return sortTrendsByTraffic(trends);
 };
 
 export const getMarketTrends = async (): Promise<Trend[]> => {
