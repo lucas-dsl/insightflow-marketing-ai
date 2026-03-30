@@ -11,17 +11,21 @@ export const mockChannelData = [
   { name: "Google Ads", value: 35, color: "hsl(var(--chart-1))" },
   { name: "Meta Ads", value: 28, color: "hsl(var(--chart-2))" },
   { name: "Email", value: 20, color: "hsl(var(--chart-3))" },
-  { name: "Orgânico", value: 12, color: "hsl(var(--chart-4))" },
-  { name: "Outros", value: 5, color: "hsl(var(--chart-5))" },
+  { name: "Instagram", value: 10, color: "hsl(var(--chart-4))" },
+  { name: "Orgânico", value: 7, color: "hsl(var(--chart-5))" },
 ];
 
+export const allChannels = mockChannelData.map((c) => c.name);
+
 export const mockTrends = [
-  { keyword: "IA generativa marketing", interest: 92, change: +34, status: "rising" as const },
-  { keyword: "short-form video ads", interest: 87, change: +21, status: "rising" as const },
-  { keyword: "personalização em escala", interest: 78, change: +15, status: "rising" as const },
-  { keyword: "cookieless targeting", interest: 71, change: +8, status: "stable" as const },
-  { keyword: "social commerce", interest: 65, change: -3, status: "stable" as const },
-  { keyword: "influencer micro", interest: 59, change: +12, status: "rising" as const },
+  { keyword: "IA generativa marketing", interest: 92, change: +34, status: "rising" as const, channels: ["Google Ads", "Meta Ads", "Email"] },
+  { keyword: "short-form video ads", interest: 87, change: +21, status: "rising" as const, channels: ["Meta Ads", "Instagram", "TikTok"] },
+  { keyword: "personalização em escala", interest: 78, change: +15, status: "rising" as const, channels: ["Email", "Automação"] },
+  { keyword: "cookieless targeting", interest: 71, change: +8, status: "stable" as const, channels: ["Google Ads", "Meta Ads"] },
+  { keyword: "social commerce", interest: 65, change: -3, status: "stable" as const, channels: ["Instagram", "TikTok"] },
+  { keyword: "influencer micro", interest: 59, change: +12, status: "rising" as const, channels: ["Instagram", "TikTok"] },
+  { keyword: "UGC creator ads", interest: 82, change: +28, status: "rising" as const, channels: ["Instagram", "Meta Ads", "TikTok"] },
+  { keyword: "email automation AI", interest: 74, change: +19, status: "rising" as const, channels: ["Email", "Automação"] },
 ];
 
 export interface InsightItem {
@@ -60,7 +64,7 @@ export const mockInsights: InsightItem[] = [
     action: "Realocar 15% do budget para conteúdo orgânico",
     creative: "Hub de conteúdo \"Guia definitivo\" com captura de lead integrada",
     impact: "Médio",
-    channels: ["Google Ads", "SEO", "Content"],
+    channels: ["Google Ads", "Orgânico"],
   },
   {
     id: 4,
@@ -79,6 +83,15 @@ export const mockInsights: InsightItem[] = [
     creative: "Fluxo \"Reativação VIP\" com oferta exclusiva e countdown",
     impact: "Médio",
     channels: ["Email", "WhatsApp"],
+  },
+  {
+    id: 6,
+    problem: "Alcance orgânico do Instagram caiu 25%",
+    trend: "Reels e short-form dominam o algoritmo (+31%)",
+    action: "Criar 5 Reels/semana com hooks nos primeiros 2s",
+    creative: "Série \"Bastidores em 15s\" mostrando o dia a dia da marca",
+    impact: "Alto",
+    channels: ["Instagram"],
   },
 ];
 
