@@ -2,7 +2,8 @@ import { Users, DollarSign, Target, TrendingUp } from "lucide-react";
 import { motion } from "framer-motion";
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell } from "recharts";
 import { MetricCard } from "@/components/MetricCard";
-import { mockCampaignData, mockChannelData } from "@/lib/mock-data";
+import { mockCampaignData, mockChannelData, allChannels } from "@/lib/mock-data";
+import { useFilter } from "@/contexts/FilterContext";
 
 const CustomTooltip = ({ active, payload, label }: any) => {
   if (!active || !payload?.length) return null;
@@ -19,6 +20,7 @@ const CustomTooltip = ({ active, payload, label }: any) => {
 };
 
 export const DashboardPage = () => {
+  const { selectedChannel, setSelectedChannel } = useFilter();
   const data = mockCampaignData;
   const latest = data[data.length - 1];
   const prev = data[data.length - 2];
@@ -35,18 +37,62 @@ export const DashboardPage = () => {
         <p className="text-sm text-muted-foreground mt-1">Performance das suas campanhas</p>
       </motion.div>
 
-      <div className="grid grid-cols-2 gap-3 mt-6">
+      {/* Channel Filter */}
+      <motion.div
+        initial={{ opacity: 0, y: 8 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ delay: 0.05 }}
+        className="mt-4 flex gap-2 overflow-x-auto pb-2 scrollbar-none"
+      >
+        <button
+          onClick={() => setSelectedChannel(null)}
+          className={`shrink-0 text-xs font-medium px-3 py-1.5 rounded-full border transition-colors ${
+            selectedChannel === null
+              ? "bg-primary text-primary-foreground border-primary"
+              : "bg-card text-muted-foreground border-border hover:border-primary/40"
+          }`}
+        >
+          Todos
+        </button>
+        {allChannels.map((ch) => (
+          <button
+            key={ch}
+            onClick={() => setSelectedChannel(selectedChannel === ch ? null : ch)}
+            className={`shrink-0 text-xs font-medium px-3 py-1.5 rounded-full border transition-colors ${
+              selectedChannel === ch
+                ? "bg-primary text-primary-foreground border-primary"
+                : "bg-card text-muted-foreground border-border hover:border-primary/40"
+            }`}
+          >
+            {ch}
+          </button>
+        ))}
+      </motion.div>
+
+      <div className="grid grid-cols-2 gap-3 mt-4">
         <MetricCard icon={Users} label="Leads" value={latest.leads.toLocaleString()} change={`+${leadsChange}%`} changeType="positive" />
         <MetricCard icon={Target} label="Conversões" value={latest.conversions.toString()} change={`+${convChange}%`} changeType="positive" />
         <MetricCard icon={DollarSign} label="Receita" value={`R$ ${(latest.revenue / 1000).toFixed(1)}k`} change={`+${revenueChange}%`} changeType="positive" />
         <MetricCard icon={TrendingUp} label="ROI" value={`${roi}%`} change="vs mês anterior" changeType="neutral" />
       </div>
 
+      {selectedChannel && (
+        <motion.div
+          initial={{ opacity: 0, height: 0 }}
+          animate={{ opacity: 1, height: "auto" }}
+          className="mt-4 rounded-2xl border border-primary/20 bg-primary/5 p-3 flex items-center gap-2"
+        >
+          <span className="text-xs text-primary font-medium">Filtro ativo:</span>
+          <span className="text-xs font-semibold text-foreground">{selectedChannel}</span>
+          <span className="text-[10px] text-muted-foreground ml-auto">Tendências e Insights filtrados</span>
+        </motion.div>
+      )}
+
       <motion.div
         initial={{ opacity: 0, y: 16 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ delay: 0.2 }}
-        className="mt-6 rounded-2xl border border-border gradient-card shadow-card p-4"
+        className="mt-4 rounded-2xl border border-border gradient-card shadow-card p-4"
       >
         <h2 className="text-sm font-semibold text-foreground mb-4">Leads vs Conversões</h2>
         <ResponsiveContainer width="100%" height={220}>
