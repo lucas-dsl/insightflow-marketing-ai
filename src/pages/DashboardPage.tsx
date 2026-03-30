@@ -17,7 +17,6 @@ import { FilterBanner } from "@/components/common/FilterBanner";
 import { PageHeader } from "@/components/common/PageHeader";
 import { MetricCard } from "@/components/dashboard/MetricCard";
 import { getDashboardSource } from "@/data/appData";
-import { allChannels } from "@/data/mockMarketingData";
 
 interface TooltipEntry {
   color: string;
@@ -50,12 +49,8 @@ const CustomTooltip = ({ active, payload, label }: CustomTooltipProps) => {
 };
 
 export const DashboardPage = () => {
-  const { hasImportedData, isDemo, selectedChannel, setSelectedChannel } =
-    useAppState();
-  const { campaignData, channelData } = getDashboardSource({
-    hasImportedData,
-    isDemo,
-  });
+  const { importedRows, selectedChannel, setSelectedChannel } = useAppState();
+  const { availableChannels, campaignData, channelData } = getDashboardSource(importedRows);
   const latest = campaignData[campaignData.length - 1];
   const previous = campaignData[campaignData.length - 2];
 
@@ -79,7 +74,7 @@ export const DashboardPage = () => {
       <motion.div initial={{ opacity: 0, y: -8 }} animate={{ opacity: 1, y: 0 }}>
         <PageHeader
           title="Dashboard de dados"
-          description="Leitura rapida da performance consolidada das campanhas."
+          description="Leitura rapida da performance consolidada das campanhas internas."
         />
       </motion.div>
 
@@ -100,7 +95,7 @@ export const DashboardPage = () => {
         >
           Todos
         </button>
-        {allChannels.map((channel) => (
+        {availableChannels.map((channel) => (
           <button
             key={channel}
             type="button"
@@ -148,7 +143,7 @@ export const DashboardPage = () => {
         />
       </div>
 
-      {selectedChannel && (isDemo || hasImportedData) ? (
+      {selectedChannel && importedRows.length > 0 ? (
         <motion.div
           initial={{ opacity: 0, height: 0 }}
           animate={{ opacity: 1, height: "auto" }}

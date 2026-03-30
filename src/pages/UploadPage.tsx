@@ -1,59 +1,125 @@
-import { useCallback, useState } from "react";
+import { useCallback, useMemo, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   AlertCircle,
   CheckCircle2,
+  Download,
+  Eye,
   FileSpreadsheet,
   Trash2,
   Upload,
 } from "lucide-react";
-import Papa from "papaparse";
 import { useNavigate } from "react-router-dom";
 import { useAppState } from "@/app/useAppState";
 import { PageHeader } from "@/components/common/PageHeader";
+import { exampleCsvFiles, type ExampleCsvFile } from "@/data/exampleCsvFiles";
+import {
+  buildCsvPreview,
+  parseCsvFile,
+  parseCsvText,
+  type CsvParseSuccess,
+} from "@/services/csvParser";
+import type { CsvPreview } from "@/types/marketing";
 
 type UploadState = "idle" | "parsing" | "success" | "error";
+
+const PreviewTable = ({ preview }: { preview: CsvPreview }) => (
+  <div className="overflow-hidden rounded-2xl border border-border bg-card">
+    <div className="border-b border-border px-4 py-3">
+      <p className="text-sm font-medium text-foreground">Preview de {preview.fileName}</p>
+      <p className="mt-1 text-xs text-muted-foreground">
+        {preview.rows.length} linhas exibidas com as colunas validadas do CSV.
+      </p>
+    </div>
+    <div className="scrollbar-hidden overflow-x-auto">
+      <table className="min-w-full text-left text-xs">
+        <thead className="bg-secondary/60 text-muted-foreground">
+          <tr>
+            {preview.columns.map((column) => (
+              <th key={column} className="px-3 py-2 font-medium uppercase tracking-wide">
+                {column}
+              </th>
+            ))}
+          </tr>
+        </thead>
+        <tbody>
+          {preview.rows.map((row, index) => (
+            <tr key={`${row.date}-${row.campaign}-${index}`} className="border-t border-border">
+              <td className="px-3 py-2 text-foreground">{row.date}</td>
+              <td className="px-3 py-2 text-foreground">{row.channel}</td>
+              <td className="px-3 py-2 text-foreground">{row.campaign}</td>
+              <td className="px-3 py-2 text-foreground">{row.spend}</td>
+              <td className="px-3 py-2 text-foreground">{row.clicks}</td>
+              <td className="px-3 py-2 text-foreground">{row.leads}</td>
+              <td className="px-3 py-2 text-foreground">{row.conversions}</td>
+              <td className="px-3 py-2 text-foreground">{row.revenue}</td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+  </div>
+);
 
 export const UploadPage = () => {
   const navigate = useNavigate();
   const {
+    clearImportedData,
     hasImportedData,
+    importedFileName,
+    importedRows,
     isDemo,
-    setHasImportedData,
-    setIsDemo,
+    setImportedData,
     setSelectedChannel,
   } = useAppState();
-  const [columns, setColumns] = useState<string[]>([]);
-  const [fileName, setFileName] = useState("");
-  const [rowCount, setRowCount] = useState(0);
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [examplePreview, setExamplePreview] = useState<CsvPreview | null>(null);
+  const [preview, setPreview] = useState<CsvPreview | null>(null);
   const [state, setState] = useState<UploadState>("idle");
 
-  const handleFile = useCallback(
-    (file: File) => {
-      setState("parsing");
-      setFileName(file.name);
+  const activePreview = examplePreview ?? preview;
+  const importedSummary = useMemo(
+    () => ({
+      columns: activePreview?.columns.length ?? 0,
+      rows: importedRows.length,
+    }),
+    [activePreview, importedRows.length],
+  );
 
-      Papa.parse(file, {
-        complete: (results) => {
-          if (results.data.length > 0) {
-            setRowCount(results.data.length);
-            setColumns(results.meta.fields || []);
-            sessionStorage.setItem("csv_data", JSON.stringify(results.data));
-            sessionStorage.setItem("csv_columns", JSON.stringify(results.meta.fields));
-            setHasImportedData(true);
-            setIsDemo(false);
-            setState("success");
-            return;
-          }
-
-          setState("error");
-        },
-        error: () => setState("error"),
-        header: true,
-        skipEmptyLines: true,
-      });
+  const applyParsedCsv = useCallback(
+    (parsed: CsvParseSuccess, demo = false) => {
+      setImportedData(parsed.rows, parsed.fileName, demo);
+      setSelectedChannel(null);
+      setPreview(buildCsvPreview(parsed));
+      setExamplePreview(null);
+      setErrorMessage(null);
+      setState("success");
     },
-    [setHasImportedData, setIsDemo],
+    [setImportedData, setSelectedChannel],
+  );
+
+  const handleFile = useCallback(
+    async (file: File) => {
+      if (!file.name.toLowerCase().endsWith(".csv")) {
+        setErrorMessage("Envie um arquivo CSV valido com extensao .csv.");
+        setState("error");
+        return;
+      }
+
+      setState("parsing");
+      setErrorMessage(null);
+
+      const parsed = await parseCsvFile(file);
+
+      if ("error" in parsed) {
+        setErrorMessage(parsed.error);
+        setState("error");
+        return;
+      }
+
+      applyParsedCsv(parsed);
+    },
+    [applyParsedCsv],
   );
 
   const handleDrop = useCallback(
@@ -61,8 +127,8 @@ export const UploadPage = () => {
       event.preventDefault();
       const file = event.dataTransfer.files[0];
 
-      if (file?.name.endsWith(".csv")) {
-        handleFile(file);
+      if (file) {
+        void handleFile(file);
       }
     },
     [handleFile],
@@ -73,31 +139,50 @@ export const UploadPage = () => {
       const file = event.target.files?.[0];
 
       if (file) {
-        handleFile(file);
+        void handleFile(file);
       }
     },
     [handleFile],
   );
 
   const handleClearData = () => {
-    sessionStorage.removeItem("csv_data");
-    sessionStorage.removeItem("csv_columns");
-    setColumns([]);
-    setFileName("");
-    setHasImportedData(false);
-    setIsDemo(false);
-    setRowCount(0);
+    clearImportedData();
     setSelectedChannel(null);
+    setPreview(null);
+    setExamplePreview(null);
+    setErrorMessage(null);
     setState("idle");
   };
 
-  const handleLoadDemo = () => {
-    sessionStorage.removeItem("csv_data");
-    sessionStorage.removeItem("csv_columns");
-    setHasImportedData(false);
-    setIsDemo(true);
-    setSelectedChannel(null);
-    navigate("/dashboard");
+  const handlePreviewExample = async (example: ExampleCsvFile) => {
+    setErrorMessage(null);
+    const response = await fetch(example.url);
+    const csvText = await response.text();
+    const parsed = await parseCsvText(csvText, example.fileName);
+
+    if ("error" in parsed) {
+      setErrorMessage(parsed.error);
+      setState("error");
+      return;
+    }
+
+    setExamplePreview(buildCsvPreview(parsed));
+  };
+
+  const handleImportExample = async (example: ExampleCsvFile) => {
+    setState("parsing");
+    setErrorMessage(null);
+    const response = await fetch(example.url);
+    const csvText = await response.text();
+    const parsed = await parseCsvText(csvText, example.fileName);
+
+    if ("error" in parsed) {
+      setErrorMessage(parsed.error);
+      setState("error");
+      return;
+    }
+
+    applyParsedCsv(parsed, true);
   };
 
   return (
@@ -105,7 +190,7 @@ export const UploadPage = () => {
       <motion.div initial={{ opacity: 0, y: -8 }} animate={{ opacity: 1, y: 0 }}>
         <PageHeader
           title="Importacao de CSV"
-          description="Importe seu arquivo com dados de campanhas, leads e vendas."
+          description="Envie dados internos da empresa, valide o arquivo e visualize uma amostra antes de seguir."
         />
       </motion.div>
 
@@ -124,11 +209,13 @@ export const UploadPage = () => {
           </div>
           <div className="text-center">
             <p className="text-sm font-medium text-foreground">
-              Toque para selecionar ou arraste um arquivo
+              Toque para selecionar ou arraste um arquivo CSV
             </p>
-            <p className="mt-1 text-xs text-muted-foreground">CSV ate 10MB</p>
+            <p className="mt-1 text-xs text-muted-foreground">
+              Colunas obrigatorias: date, channel, campaign, spend, clicks, leads, conversions e revenue
+            </p>
           </div>
-          <input type="file" accept=".csv" className="hidden" onChange={handleInput} />
+          <input type="file" accept=".csv,text/csv" className="hidden" onChange={handleInput} />
         </label>
       </motion.div>
 
@@ -142,11 +229,27 @@ export const UploadPage = () => {
             className="flex items-center gap-3 rounded-2xl border border-border bg-card p-4"
           >
             <div className="h-5 w-5 animate-spin rounded-full border-2 border-primary border-t-transparent" />
-            <p className="text-sm text-muted-foreground">Processando {fileName}...</p>
+            <p className="text-sm text-muted-foreground">Validando e transformando o CSV...</p>
           </motion.div>
         ) : null}
 
-        {state === "success" ? (
+        {state === "error" && errorMessage ? (
+          <motion.div
+            key="error"
+            initial={{ opacity: 0, y: 8 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0 }}
+            className="flex items-center gap-3 rounded-2xl border border-destructive/20 bg-destructive/5 p-4"
+          >
+            <AlertCircle className="h-5 w-5 shrink-0 text-destructive" />
+            <div>
+              <p className="text-sm font-medium text-foreground">Nao foi possivel importar</p>
+              <p className="mt-0.5 text-xs text-muted-foreground">{errorMessage}</p>
+            </div>
+          </motion.div>
+        ) : null}
+
+        {state === "success" && hasImportedData ? (
           <motion.div
             key="success"
             initial={{ opacity: 0, y: 8 }}
@@ -159,7 +262,7 @@ export const UploadPage = () => {
               <div>
                 <p className="text-sm font-medium text-foreground">Importacao concluida</p>
                 <p className="mt-0.5 text-xs text-muted-foreground">
-                  {rowCount.toLocaleString()} linhas • {columns.length} colunas
+                  {importedRows.length.toLocaleString()} linhas • {activePreview?.columns.length ?? 0} colunas
                 </p>
               </div>
             </div>
@@ -167,19 +270,16 @@ export const UploadPage = () => {
             <div className="rounded-2xl border border-border bg-card p-4">
               <div className="mb-3 flex items-center gap-2">
                 <FileSpreadsheet className="h-4 w-4 text-primary" />
-                <p className="text-xs font-medium text-foreground">{fileName}</p>
+                <p className="text-xs font-medium text-foreground">
+                  {importedFileName ?? "Arquivo importado"}
+                </p>
               </div>
-              <div className="flex flex-wrap gap-1.5">
-                {columns.map((column) => (
-                  <span
-                    key={column}
-                    className="rounded-lg bg-secondary px-2 py-1 text-[11px] font-mono text-secondary-foreground"
-                  >
-                    {column}
-                  </span>
-                ))}
-              </div>
+              <p className="text-xs text-muted-foreground">
+                Os dados foram salvos no estado global e ja alimentam Dashboard e Insights automaticamente.
+              </p>
             </div>
+
+            {activePreview ? <PreviewTable preview={activePreview} /> : null}
 
             <button
               type="button"
@@ -190,56 +290,78 @@ export const UploadPage = () => {
             </button>
           </motion.div>
         ) : null}
-
-        {state === "error" ? (
-          <motion.div
-            key="error"
-            initial={{ opacity: 0, y: 8 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0 }}
-            className="flex items-center gap-3 rounded-2xl border border-destructive/20 bg-destructive/5 p-4"
-          >
-            <AlertCircle className="h-5 w-5 shrink-0 text-destructive" />
-            <div>
-              <p className="text-sm font-medium text-foreground">Erro ao processar</p>
-              <p className="mt-0.5 text-xs text-muted-foreground">
-                Verifique o formato do arquivo CSV
-              </p>
-            </div>
-          </motion.div>
-        ) : null}
       </AnimatePresence>
 
-      {state === "idle" ? (
-        <motion.div
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          transition={{ delay: 0.3 }}
-          className="space-y-3"
-        >
-          {isDemo || hasImportedData ? (
-            <button
-              type="button"
-              onClick={handleClearData}
-              className="flex w-full items-center justify-center gap-2 rounded-2xl border border-destructive/20 bg-destructive/5 py-3.5 text-sm font-medium text-destructive transition-colors hover:bg-destructive/10 active:scale-[0.98]"
-            >
-              <Trash2 className="h-4 w-4" />
-              Limpar dados
-            </button>
-          ) : null}
-
-          <p className="text-xs font-medium uppercase tracking-wider text-muted-foreground">
-            Ou use dados de exemplo
-          </p>
+      <div className="space-y-3">
+        {hasImportedData ? (
           <button
             type="button"
-            onClick={handleLoadDemo}
-            className="w-full rounded-2xl border border-border bg-card py-3.5 text-sm font-medium text-foreground transition-colors hover:bg-secondary active:scale-[0.98]"
+            onClick={handleClearData}
+            className="flex w-full items-center justify-center gap-2 rounded-2xl border border-destructive/20 bg-destructive/5 py-3.5 text-sm font-medium text-destructive transition-colors hover:bg-destructive/10 active:scale-[0.98]"
           >
-            Adicionar dados ficticios
+            <Trash2 className="h-4 w-4" />
+            Limpar dados importados
           </button>
-        </motion.div>
-      ) : null}
+        ) : null}
+
+        <div className="space-y-2">
+          <p className="text-xs font-medium uppercase tracking-wider text-muted-foreground">
+            Exemplos da empresa
+          </p>
+          {exampleCsvFiles.map((example) => (
+            <article key={example.id} className="rounded-2xl border border-border bg-card p-4">
+              <div className="flex items-start justify-between gap-3">
+                <div>
+                  <h3 className="text-sm font-semibold text-foreground">{example.title}</h3>
+                  <p className="mt-1 text-xs text-muted-foreground">{example.description}</p>
+                </div>
+                {isDemo && importedFileName === example.fileName ? (
+                  <span className="rounded-full bg-primary/10 px-2 py-1 text-[10px] font-semibold text-primary">
+                    Em uso
+                  </span>
+                ) : null}
+              </div>
+              <div className="mt-4 flex flex-wrap gap-2">
+                <button
+                  type="button"
+                  onClick={() => void handlePreviewExample(example)}
+                  className="inline-flex items-center gap-2 rounded-xl border border-border px-3 py-2 text-xs font-medium text-foreground transition-colors hover:bg-secondary"
+                >
+                  <Eye className="h-3.5 w-3.5" />
+                  Visualizar
+                </button>
+                <button
+                  type="button"
+                  onClick={() => void handleImportExample(example)}
+                  className="inline-flex items-center gap-2 rounded-xl bg-primary px-3 py-2 text-xs font-semibold text-primary-foreground"
+                >
+                  <FileSpreadsheet className="h-3.5 w-3.5" />
+                  Importar exemplo
+                </button>
+                <a
+                  href={example.url}
+                  download={example.fileName}
+                  className="inline-flex items-center gap-2 rounded-xl border border-border px-3 py-2 text-xs font-medium text-foreground transition-colors hover:bg-secondary"
+                >
+                  <Download className="h-3.5 w-3.5" />
+                  Baixar CSV
+                </a>
+              </div>
+            </article>
+          ))}
+        </div>
+
+        {activePreview && state !== "success" ? <PreviewTable preview={activePreview} /> : null}
+
+        {state === "idle" && !hasImportedData ? (
+          <div className="rounded-2xl border border-border bg-card p-4">
+            <p className="text-sm font-medium text-foreground">Nenhum dado interno carregado</p>
+            <p className="mt-1 text-xs text-muted-foreground">
+              Dashboard e Insights permanecem vazios ate a importacao de um CSV valido.
+            </p>
+          </div>
+        ) : null}
+      </div>
     </section>
   );
 };

@@ -1,18 +1,17 @@
-import type { CampaignRow } from "@/data/mockMarketingData";
+import type { MarketingCsvRow } from "@/types/marketing";
+import type { Trend } from "@/services/trendsService";
 
-type TrendItem = {
-  change: number;
-  channels: string[];
-  interest: number;
-  keyword: string;
-  status: "rising" | "stable";
-};
-
-type ChannelItem = {
-  color: string;
-  name: string;
-  value: number;
-};
+interface ChannelPerformance {
+  channel: string;
+  clicks: number;
+  conversionRate: number;
+  conversions: number;
+  costPerLead: number;
+  ctr: number;
+  leads: number;
+  revenue: number;
+  spend: number;
+}
 
 export interface GeneratedInsight {
   id: string;
@@ -25,62 +24,9 @@ export interface GeneratedInsight {
 }
 
 interface InsightsEngineInput {
-  campaignData: CampaignRow[];
-  channelData: ChannelItem[];
-  trends: TrendItem[];
+  rows: MarketingCsvRow[];
+  trends: Trend[];
 }
-
-interface ChannelPerformance {
-  channel: string;
-  clicks: number;
-  conversionRate: number;
-  conversions: number;
-  costPerLead: number;
-  ctr: number;
-  leads: number;
-  share: number;
-}
-
-const channelPerformanceProfiles: Record<
-  string,
-  { clickShare: number; conversionBoost: number; ctrBase: number; leadBoost: number; spendBoost: number }
-> = {
-  Email: {
-    clickShare: 0.16,
-    conversionBoost: 1.35,
-    ctrBase: 3.8,
-    leadBoost: 0.9,
-    spendBoost: 0.55,
-  },
-  "Google Ads": {
-    clickShare: 0.18,
-    conversionBoost: 1.08,
-    ctrBase: 2.4,
-    leadBoost: 1,
-    spendBoost: 1.15,
-  },
-  Instagram: {
-    clickShare: 0.13,
-    conversionBoost: 0.88,
-    ctrBase: 1.7,
-    leadBoost: 0.86,
-    spendBoost: 0.9,
-  },
-  "Meta Ads": {
-    clickShare: 0.15,
-    conversionBoost: 0.94,
-    ctrBase: 1.5,
-    leadBoost: 0.95,
-    spendBoost: 1.02,
-  },
-  Organico: {
-    clickShare: 0.11,
-    conversionBoost: 1.18,
-    ctrBase: 3.2,
-    leadBoost: 0.72,
-    spendBoost: 0.25,
-  },
-};
 
 const normalizePriority = (score: number): GeneratedInsight["priority"] => {
   if (score >= 80) return "Alta";
@@ -88,113 +34,109 @@ const normalizePriority = (score: number): GeneratedInsight["priority"] => {
   return "Baixa";
 };
 
-const buildChannelPerformance = (
-  campaignData: CampaignRow[],
-  channelData: ChannelItem[],
-): ChannelPerformance[] => {
-  const latest = campaignData[campaignData.length - 1];
+const buildChannelPerformance = (rows: MarketingCsvRow[]): ChannelPerformance[] => {
+  const channelsMap = new Map<string, ChannelPerformance>();
 
-  return channelData.map((channel) => {
-    const share = channel.value / 100;
-    const profile = channelPerformanceProfiles[channel.name] ?? {
-      clickShare: 0.14,
-      conversionBoost: 1,
-      ctrBase: 2,
-      leadBoost: 1,
-      spendBoost: 1,
+  rows.forEach((row) => {
+    const current = channelsMap.get(row.channel) ?? {
+      channel: row.channel,
+      clicks: 0,
+      conversionRate: 0,
+      conversions: 0,
+      costPerLead: 0,
+      ctr: 0,
+      leads: 0,
+      revenue: 0,
+      spend: 0,
     };
-    const leads = latest.leads * share * profile.leadBoost;
-    const conversions = latest.conversions * share * profile.conversionBoost;
-    const clicks = Math.max(leads / 0.28, latest.leads * share * profile.clickShare);
-    const impressions = clicks / (profile.ctrBase / 100);
-    const ctr = impressions === 0 ? 0 : (clicks / impressions) * 100;
-    const spend = latest.spend * share * profile.spendBoost;
-    const costPerLead = leads === 0 ? 0 : spend / leads;
-    const conversionRate = leads === 0 ? 0 : (conversions / leads) * 100;
 
-    return {
-      channel: channel.name,
-      clicks,
-      conversionRate,
-      conversions,
-      costPerLead,
-      ctr,
-      leads,
-      share: channel.value,
-    };
+    current.clicks += row.clicks;
+    current.conversions += row.conversions;
+    current.leads += row.leads;
+    current.revenue += row.revenue;
+    current.spend += row.spend;
+
+    channelsMap.set(row.channel, current);
   });
+
+  return Array.from(channelsMap.values()).map((channel) => ({
+    ...channel,
+    conversionRate: channel.leads === 0 ? 0 : (channel.conversions / channel.leads) * 100,
+    costPerLead: channel.leads === 0 ? 0 : channel.spend / channel.leads,
+    ctr: channel.clicks === 0 ? 0 : (channel.leads / channel.clicks) * 100,
+  }));
 };
 
-export const generateInsights = ({
-  campaignData,
-  channelData,
-  trends,
-}: InsightsEngineInput): GeneratedInsight[] => {
-  if (!campaignData.length || !channelData.length || !trends.length) {
+export const generateInsights = ({ rows, trends }: InsightsEngineInput): GeneratedInsight[] => {
+  if (!rows.length) {
     return [];
   }
 
-  const performance = buildChannelPerformance(campaignData, channelData);
-  const latest = campaignData[campaignData.length - 1];
-  const previous = campaignData[campaignData.length - 2] ?? campaignData[campaignData.length - 1];
-  const overallCostPerLead = latest.leads === 0 ? 0 : latest.spend / latest.leads;
+  const performance = buildChannelPerformance(rows);
+  const overallCostPerLead =
+    rows.reduce((sum, row) => sum + row.spend, 0) /
+    Math.max(rows.reduce((sum, row) => sum + row.leads, 0), 1);
   const bestChannel = [...performance].sort(
     (left, right) => right.conversionRate - left.conversionRate,
   )[0];
-  const worstCtrChannel = [...performance].sort((left, right) => left.ctr - right.ctr)[0];
+  const lowestCtrChannel = [...performance].sort((left, right) => left.ctr - right.ctr)[0];
   const highestCplChannel = [...performance].sort(
     (left, right) => right.costPerLead - left.costPerLead,
   )[0];
-  const hottestTrend = [...trends].sort((left, right) => right.change - left.change)[0];
-  const leadsGrowth =
-    previous.leads === 0 ? 0 : ((latest.leads - previous.leads) / previous.leads) * 100;
+  const hottestTrend = [...trends].sort(
+    (left, right) => right.traffic - left.traffic,
+  )[0];
 
   const insights: GeneratedInsight[] = [];
 
-  if (worstCtrChannel && worstCtrChannel.ctr < 2.2) {
+  if (lowestCtrChannel && lowestCtrChannel.ctr < 12) {
     insights.push({
       id: "low-ctr",
-      problem: `CTR abaixo do ideal em ${worstCtrChannel.channel} (${worstCtrChannel.ctr.toFixed(1)}%).`,
-      opportunity: `A tendencia "${hottestTrend.keyword}" cresce ${hottestTrend.change}% e conversa com esse canal.`,
-      action: `Testar novas aberturas, criativos e segmentacoes em ${worstCtrChannel.channel} por 7 dias.`,
-      creativeIdea: `Criar uma serie com gancho forte nos 3 primeiros segundos conectando a oferta com "${hottestTrend.keyword}".`,
-      priority: normalizePriority(88),
-      channels: Array.from(new Set([worstCtrChannel.channel, ...hottestTrend.channels])),
+      problem: `CTR baixo em ${lowestCtrChannel.channel} (${lowestCtrChannel.ctr.toFixed(1)}% de clique para lead).`,
+      opportunity: hottestTrend
+        ? `A tendencia externa "${hottestTrend.keyword}" esta em alta com ${new Intl.NumberFormat("pt-BR").format(hottestTrend.traffic)} buscas e pode renovar a mensagem desse canal.`
+        : "Existe espaco para reposicionar a proposta de valor e recuperar resposta do publico.",
+      action: `Revisar segmentacao, oferta e criativos de ${lowestCtrChannel.channel} com um novo teste A/B por 7 dias.`,
+      creativeIdea: hottestTrend
+        ? `Criar uma campanha conectando a promessa principal com "${hottestTrend.keyword}" em formato de prova social e ganho rapido.`
+        : `Criar uma nova versao do anuncio com angulo de dor, prova social e CTA unico para ${lowestCtrChannel.channel}.`,
+      priority: normalizePriority(86),
+      channels: [lowestCtrChannel.channel],
     });
   }
 
-  if (highestCplChannel && highestCplChannel.costPerLead > overallCostPerLead * 1.1) {
+  if (highestCplChannel && highestCplChannel.costPerLead > overallCostPerLead * 1.15) {
     insights.push({
       id: "high-cpl",
-      problem: `Custo por lead elevado em ${highestCplChannel.channel} (R$ ${highestCplChannel.costPerLead.toFixed(2)}).`,
-      opportunity: `Existe margem para reduzir CPL redistribuindo verba para jornadas e formatos mais eficientes.`,
-      action: `Diminuir 10% da verba de ${highestCplChannel.channel} e testar segmentacoes de maior intencao.`,
-      creativeIdea: `Montar uma campanha comparativa com prova social, oferta direta e CTA unico para reduzir friccao.`,
+      problem: `Custo por lead alto em ${highestCplChannel.channel} (R$ ${highestCplChannel.costPerLead.toFixed(2)}).`,
+      opportunity: "Uma redistribuicao parcial de verba pode reduzir aquisicao cara sem perder volume total.",
+      action: `Reduzir 10% da verba de ${highestCplChannel.channel} e mover para campanhas com melhor eficiencia nas proximas 2 semanas.`,
+      creativeIdea: `Montar um criativo comparativo com oferta objetiva, callout de beneficio e CTA direto para captacao mais qualificada.`,
       priority: normalizePriority(82),
       channels: [highestCplChannel.channel],
     });
   }
 
-  if (hottestTrend && hottestTrend.change > 15) {
+  if (hottestTrend) {
     insights.push({
-      id: "rising-trend",
-      problem: `O time ainda nao transformou a alta de "${hottestTrend.keyword}" em campanha aplicada.`,
-      opportunity: `A busca externa esta acelerando ${hottestTrend.change}% com interesse ${hottestTrend.interest}/100.`,
-      action: `Subir um teste rapido alinhado a "${hottestTrend.keyword}" nos canais mais aderentes desta tendencia.`,
-      creativeIdea: `Publicar uma campanha com linguagem de oportunidade imediata, benchmark do mercado e CTA de resposta curta.`,
-      priority: normalizePriority(76),
-      channels: hottestTrend.channels,
+      id: "external-trend",
+      problem: `A alta de "${hottestTrend.keyword}" ainda nao aparece nas campanhas internas da operacao.`,
+      opportunity: `O mercado brasileiro ja demonstra ${new Intl.NumberFormat("pt-BR").format(hottestTrend.traffic)} buscas em torno desse tema.`,
+      action: `Lancar um teste rapido dessa narrativa no canal com melhor eficiencia comercial para validar aderencia.`,
+      creativeIdea: `Desenvolver uma peca de oportunidade imediata com headline de tendencia, caso de uso pratico e CTA curto.`,
+      priority: normalizePriority(74),
+      channels: bestChannel ? [bestChannel.channel] : [lowestCtrChannel?.channel ?? "Mercado"],
     });
   }
 
   if (bestChannel) {
     insights.push({
       id: "best-conversion-channel",
-      problem: `O melhor canal por conversao ainda nao esta sendo usado como referencia operacional.`,
-      opportunity: `${bestChannel.channel} lidera com taxa de conversao estimada de ${bestChannel.conversionRate.toFixed(1)}%.`,
-      action: `Replicar a estrutura de copy, oferta e audiencia de ${bestChannel.channel} nos canais com menor eficiencia.`,
-      creativeIdea: `Criar um kit de criativos inspirado no canal campeao: headline, prova social, CTA e variacoes por publico.`,
-      priority: normalizePriority(leadsGrowth >= 10 ? 72 : 64),
+      problem: `O melhor canal por conversao ainda nao esta sendo usado como playbook do restante da operacao.`,
+      opportunity: `${bestChannel.channel} lidera a conversao com ${bestChannel.conversionRate.toFixed(1)}% e pode servir de referencia para os outros canais.`,
+      action: `Replicar estrutura de campanha, copy e oferta de ${bestChannel.channel} nos canais com menor resposta.`,
+      creativeIdea: `Criar um kit criativo inspirado em ${bestChannel.channel} com headline, prova social, CTA e variacoes por publico.`,
+      priority: normalizePriority(68),
       channels: [bestChannel.channel],
     });
   }

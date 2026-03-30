@@ -1,10 +1,14 @@
 import { createContext } from "react";
+import type { MarketingCsvRow } from "@/types/marketing";
 
 export interface AppStateValue {
   hasImportedData: boolean;
+  importedFileName: string | null;
+  importedRows: MarketingCsvRow[];
   isDemo: boolean;
   selectedChannel: string | null;
-  setHasImportedData: (value: boolean) => void;
+  clearImportedData: () => void;
+  setImportedData: (rows: MarketingCsvRow[], fileName: string, isDemo?: boolean) => void;
   setIsDemo: (value: boolean) => void;
   setSelectedChannel: (value: string | null) => void;
 }

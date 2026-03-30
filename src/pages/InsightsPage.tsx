@@ -1,19 +1,36 @@
+import { useEffect, useState } from "react";
 import { motion } from "framer-motion";
 import { Sparkles } from "lucide-react";
 import { useAppState } from "@/app/useAppState";
 import { FilterBanner } from "@/components/common/FilterBanner";
 import { PageHeader } from "@/components/common/PageHeader";
 import { InsightCard } from "@/components/insights/InsightCard";
-import { getDashboardSource } from "@/data/appData";
 import { generateInsights } from "@/services/insightsEngine";
+import { getMarketTrends, type Trend } from "@/services/trendsService";
 
 export const InsightsPage = () => {
-  const { hasImportedData, isDemo, selectedChannel } = useAppState();
-  const { campaignData, channelData, trends } = getDashboardSource({
-    hasImportedData,
-    isDemo,
-  });
-  const insights = generateInsights({ campaignData, channelData, trends });
+  const { hasImportedData, importedRows, selectedChannel } = useAppState();
+  const [marketTrends, setMarketTrends] = useState<Trend[]>([]);
+
+  useEffect(() => {
+    let active = true;
+
+    const loadMarketTrends = async () => {
+      const trends = await getMarketTrends();
+
+      if (active) {
+        setMarketTrends(trends);
+      }
+    };
+
+    void loadMarketTrends();
+
+    return () => {
+      active = false;
+    };
+  }, []);
+
+  const insights = generateInsights({ rows: importedRows, trends: marketTrends });
 
   const filteredInsights = selectedChannel
     ? insights.filter((insight) =>
@@ -28,7 +45,7 @@ export const InsightsPage = () => {
       <motion.div initial={{ opacity: 0, y: -8 }} animate={{ opacity: 1, y: 0 }}>
         <PageHeader
           title="Insights criativos"
-          description="Problemas detectados e oportunidades de mercado em uma mesma leitura."
+          description="Problemas internos e oportunidades externas combinados a partir dos dados importados."
           badge="IA"
         />
       </motion.div>
@@ -59,8 +76,7 @@ export const InsightsPage = () => {
             {filteredInsights.length} insights gerados
           </p>
           <p className="mt-0.5 text-xs text-muted-foreground">
-            Cada card agora cruza problema, oportunidade, acao e ideia criativa a
-            partir das metricas do projeto.
+            O motor cruza CTR, custo por lead, conversao por canal e tendencias externas reais para sugerir proximos movimentos.
           </p>
         </div>
       </motion.section>
@@ -69,9 +85,9 @@ export const InsightsPage = () => {
         {filteredInsights.length === 0 ? (
           <div className="rounded-2xl border border-border bg-card p-8 text-center">
             <p className="text-sm text-muted-foreground">
-              {isDemo || hasImportedData
+              {hasImportedData
                 ? `Nenhum insight encontrado para "${selectedChannel}"`
-                : "Nenhum insight gerado porque ainda nao ha dados importados."}
+                : "Nenhum insight gerado porque ainda nao ha dados internos importados."}
             </p>
           </div>
         ) : (
