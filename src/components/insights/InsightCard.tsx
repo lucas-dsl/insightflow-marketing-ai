@@ -1,16 +1,16 @@
 import { motion } from "framer-motion";
 import { AlertTriangle, Lightbulb, Target, TrendingUp } from "lucide-react";
-import type { InsightItem } from "@/data/mockMarketingData";
+import type { GeneratedInsight } from "@/services/insightsEngine";
 
-const impactClasses: Record<InsightItem["impact"], string> = {
-  Alto: "bg-destructive/15 text-destructive",
-  Medio: "bg-warning/15 text-warning",
-  Baixo: "bg-muted text-muted-foreground",
+const priorityClasses: Record<GeneratedInsight["priority"], string> = {
+  Alta: "bg-destructive/15 text-destructive",
+  Media: "bg-warning/15 text-warning",
+  Baixa: "bg-muted text-muted-foreground",
 };
 
 interface InsightCardProps {
   index: number;
-  insight: InsightItem;
+  insight: GeneratedInsight;
 }
 
 const sections = [
@@ -21,9 +21,9 @@ const sections = [
     tone: "border-destructive/10 bg-destructive/5 text-destructive",
   },
   {
-    key: "trend",
+    key: "opportunity",
     icon: TrendingUp,
-    label: "Tendencia",
+    label: "Oportunidade",
     tone: "border-accent/10 bg-accent/5 text-accent",
   },
   {
@@ -33,9 +33,9 @@ const sections = [
     tone: "border-primary/10 bg-primary/5 text-primary",
   },
   {
-    key: "creative",
+    key: "creativeIdea",
     icon: Lightbulb,
-    label: "Insight criativo",
+    label: "Ideia criativa",
     tone: "border-warning/10 bg-warning/5 text-warning",
   },
 ] as const;
@@ -50,12 +50,12 @@ export const InsightCard = ({ index, insight }: InsightCardProps) => (
     <div className="space-y-3 p-4">
       <div className="flex items-center justify-between">
         <span className="text-xs font-semibold text-muted-foreground">
-          Insight #{insight.id}
+          Insight {index + 1}
         </span>
         <span
-          className={`rounded-full px-2.5 py-0.5 text-[10px] font-bold ${impactClasses[insight.impact]}`}
+          className={`rounded-full px-2.5 py-0.5 text-[10px] font-bold ${priorityClasses[insight.priority]}`}
         >
-          Impacto {insight.impact}
+          Prioridade {insight.priority}
         </span>
       </div>
 

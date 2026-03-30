@@ -5,10 +5,15 @@ import { FilterBanner } from "@/components/common/FilterBanner";
 import { PageHeader } from "@/components/common/PageHeader";
 import { InsightCard } from "@/components/insights/InsightCard";
 import { getDashboardSource } from "@/data/appData";
+import { generateInsights } from "@/services/insightsEngine";
 
 export const InsightsPage = () => {
   const { hasImportedData, isDemo, selectedChannel } = useAppState();
-  const { insights } = getDashboardSource({ hasImportedData, isDemo });
+  const { campaignData, channelData, trends } = getDashboardSource({
+    hasImportedData,
+    isDemo,
+  });
+  const insights = generateInsights({ campaignData, channelData, trends });
 
   const filteredInsights = selectedChannel
     ? insights.filter((insight) =>
@@ -54,8 +59,8 @@ export const InsightsPage = () => {
             {filteredInsights.length} insights gerados
           </p>
           <p className="mt-0.5 text-xs text-muted-foreground">
-            Cada card combina problema, tendencia e proposta criativa em um
-            padrao unico.
+            Cada card agora cruza problema, oportunidade, acao e ideia criativa a
+            partir das metricas do projeto.
           </p>
         </div>
       </motion.section>

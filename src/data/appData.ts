@@ -1,7 +1,6 @@
 import {
   mockCampaignData,
   mockChannelData,
-  mockInsights,
   mockTrends,
 } from "@/data/mockMarketingData";
 
@@ -32,7 +31,6 @@ export const getDashboardSource = ({
     return {
       campaignData: mockCampaignData,
       channelData: mockChannelData,
-      insights: mockInsights,
       trends: mockTrends,
     };
   }
@@ -40,7 +38,6 @@ export const getDashboardSource = ({
   return {
     campaignData: emptyCampaignData,
     channelData: emptyChannelData,
-    insights: [],
     trends: [],
   };
 };

@@ -17,6 +17,8 @@ export const mockChannelData = [
 
 export const allChannels = mockChannelData.map((channel) => channel.name);
 
+export type CampaignRow = (typeof mockCampaignData)[number];
+
 export const mockTrends = [
   {
     keyword: "IA generativa marketing",
