@@ -1,105 +1,139 @@
 import { motion } from "framer-motion";
-import { TrendingUp, ArrowUpRight, Minus, Sparkles, Filter } from "lucide-react";
-import { mockTrends } from "@/lib/mock-data";
-import { useFilter } from "@/contexts/FilterContext";
+import { ArrowUpRight, Minus, Sparkles } from "lucide-react";
+import { useAppState } from "@/app/useAppState";
+import { FilterBanner } from "@/components/common/FilterBanner";
+import { PageHeader } from "@/components/common/PageHeader";
+import { getDashboardSource } from "@/data/appData";
 
 export const TrendsPage = () => {
-  const { selectedChannel } = useFilter();
+  const { hasImportedData, isDemo, selectedChannel } = useAppState();
+  const { trends } = getDashboardSource({ hasImportedData, isDemo });
 
   const filteredTrends = selectedChannel
-    ? mockTrends.filter((t) => t.channels.some((ch) => ch.toLowerCase().includes(selectedChannel.toLowerCase())))
-    : mockTrends;
+    ? trends.filter((trend) =>
+        trend.channels.some((channel) =>
+          channel.toLowerCase().includes(selectedChannel.toLowerCase()),
+        ),
+      )
+    : trends;
 
   return (
-    <div className="min-h-screen pb-24 px-4 pt-6">
+    <section className="screen-container">
       <motion.div initial={{ opacity: 0, y: -8 }} animate={{ opacity: 1, y: 0 }}>
-        <h1 className="text-2xl font-bold text-foreground">Tendências</h1>
-        <p className="text-sm text-muted-foreground mt-1">Tendências de mercado em tempo real</p>
+        <PageHeader
+          title="Tendencias de mercado"
+          description="Sinais e movimentos relevantes para orientar decisao e canal."
+        />
       </motion.div>
 
-      {selectedChannel && (
+      {selectedChannel && filteredTrends.length > 0 ? (
         <motion.div
           initial={{ opacity: 0, y: 8 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.05 }}
-          className="mt-4 rounded-2xl border border-primary/20 bg-primary/5 p-3 flex items-center gap-2"
         >
-          <Filter className="h-3.5 w-3.5 text-primary" />
-          <span className="text-xs text-primary font-medium">Filtrado por:</span>
-          <span className="text-xs font-semibold text-foreground">{selectedChannel}</span>
-          <span className="text-[10px] text-muted-foreground ml-auto">{filteredTrends.length} tendências</span>
+          <FilterBanner
+            count={filteredTrends.length}
+            label="tendencias"
+            value={selectedChannel}
+          />
         </motion.div>
-      )}
+      ) : null}
 
-      <motion.div
+      <motion.section
         initial={{ opacity: 0, y: 12 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ delay: 0.1 }}
-        className="mt-4 rounded-2xl border border-primary/20 bg-primary/5 p-4 flex items-start gap-3"
+        className="flex items-start gap-3 rounded-2xl border border-primary/20 bg-primary/5 p-4"
       >
-        <Sparkles className="h-5 w-5 text-primary shrink-0 mt-0.5" />
+        <Sparkles className="mt-0.5 h-5 w-5 shrink-0 text-primary" />
         <div>
-          <p className="text-sm font-medium text-foreground">Análise inteligente</p>
-          <p className="text-xs text-muted-foreground mt-0.5">
-            Dados baseados em tendências de busca e comportamento de mercado. Conecte com Google Trends para dados em tempo real.
+          <p className="text-sm font-medium text-foreground">Leitura assistida</p>
+          <p className="mt-0.5 text-xs text-muted-foreground">
+            A tela segue pronta para trocar mocks por uma fonte externa depois, sem
+            alterar a composicao visual.
           </p>
         </div>
-      </motion.div>
+      </motion.section>
 
-      <div className="mt-6 space-y-3">
+      <div className="space-y-3">
         {filteredTrends.length === 0 ? (
           <div className="rounded-2xl border border-border bg-card p-8 text-center">
-            <p className="text-sm text-muted-foreground">Nenhuma tendência encontrada para "{selectedChannel}"</p>
+            <p className="text-sm text-muted-foreground">
+              {isDemo || hasImportedData
+                ? `Nenhuma tendencia encontrada para "${selectedChannel}"`
+                : "Nenhuma tendencia disponivel enquanto nao houver dados."}
+            </p>
           </div>
         ) : (
-          filteredTrends.map((trend, i) => (
-            <motion.div
+          filteredTrends.map((trend, index) => (
+            <motion.article
               key={trend.keyword}
               initial={{ opacity: 0, x: -12 }}
               animate={{ opacity: 1, x: 0 }}
-              transition={{ delay: 0.15 + i * 0.08 }}
-              className="rounded-2xl border border-border gradient-card shadow-card p-4"
+              transition={{ delay: 0.15 + index * 0.08 }}
+              className="surface-card p-4"
             >
-              <div className="flex items-start justify-between mb-3">
-                <h3 className="text-sm font-semibold text-foreground leading-snug flex-1">{trend.keyword}</h3>
-                <div className={`flex items-center gap-1 text-xs font-mono font-medium ${
-                  trend.change > 0 ? "text-success" : trend.change < 0 ? "text-destructive" : "text-muted-foreground"
-                }`}>
-                  {trend.change > 0 ? <ArrowUpRight className="h-3 w-3" /> : <Minus className="h-3 w-3" />}
-                  {trend.change > 0 ? "+" : ""}{trend.change}%
+              <div className="mb-3 flex items-start justify-between">
+                <h2 className="flex-1 text-sm font-semibold leading-snug text-foreground">
+                  {trend.keyword}
+                </h2>
+                <div
+                  className={`flex items-center gap-1 text-xs font-medium ${
+                    trend.change > 0
+                      ? "text-success"
+                      : trend.change < 0
+                        ? "text-destructive"
+                        : "text-muted-foreground"
+                  }`}
+                >
+                  {trend.change > 0 ? (
+                    <ArrowUpRight className="h-3 w-3" />
+                  ) : (
+                    <Minus className="h-3 w-3" />
+                  )}
+                  {trend.change > 0 ? "+" : ""}
+                  {trend.change}%
                 </div>
               </div>
 
               <div className="flex items-center gap-3">
-                <div className="flex-1 h-2 rounded-full bg-secondary overflow-hidden">
+                <div className="h-2 flex-1 overflow-hidden rounded-full bg-secondary">
                   <motion.div
                     initial={{ width: 0 }}
                     animate={{ width: `${trend.interest}%` }}
-                    transition={{ delay: 0.3 + i * 0.08, duration: 0.6 }}
+                    transition={{ delay: 0.3 + index * 0.08, duration: 0.6 }}
                     className="h-full rounded-full gradient-primary"
                   />
                 </div>
-                <span className="text-xs font-mono text-muted-foreground w-8 text-right">{trend.interest}</span>
+                <span className="w-8 text-right font-mono text-xs text-muted-foreground">
+                  {trend.interest}
+                </span>
               </div>
 
-              <div className="mt-2 flex items-center gap-2 flex-wrap">
-                <span className={`text-[10px] px-2 py-0.5 rounded-full font-medium ${
-                  trend.status === "rising"
-                    ? "bg-success/10 text-success border border-success/20"
-                    : "bg-secondary text-secondary-foreground"
-                }`}>
-                  {trend.status === "rising" ? "Em alta" : "Estável"}
+              <div className="mt-2 flex flex-wrap items-center gap-2">
+                <span
+                  className={`rounded-full px-2 py-0.5 text-[10px] font-medium ${
+                    trend.status === "rising"
+                      ? "border border-success/20 bg-success/10 text-success"
+                      : "bg-secondary text-secondary-foreground"
+                  }`}
+                >
+                  {trend.status === "rising" ? "Em alta" : "Estavel"}
                 </span>
-                {trend.channels.map((ch) => (
-                  <span key={ch} className="text-[10px] px-1.5 py-0.5 rounded bg-secondary text-secondary-foreground">
-                    {ch}
+                {trend.channels.map((channel) => (
+                  <span
+                    key={channel}
+                    className="rounded bg-secondary px-1.5 py-0.5 text-[10px] text-secondary-foreground"
+                  >
+                    {channel}
                   </span>
                 ))}
               </div>
-            </motion.div>
+            </motion.article>
           ))
         )}
       </div>
-    </div>
+    </section>
   );
 };
