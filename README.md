@@ -122,11 +122,6 @@ O foco do case está muito mais na **ideia, arquitetura do MVP e capacidade de v
 * Supabase Edge Functions
 * SerpApi
 
-### Inteligência do produto
-
-* Rules-based Insights Engine
-* Correlação entre tendências e KPIs
-
 ### Prototipação e aceleração
 
 * Lovable (protótipo inicial)
