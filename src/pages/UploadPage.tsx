@@ -1,8 +1,9 @@
 import { useState, useCallback } from "react";
-import { Upload, FileSpreadsheet, CheckCircle2, AlertCircle } from "lucide-react";
+import { Upload, FileSpreadsheet, CheckCircle2, AlertCircle, Trash2 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import Papa from "papaparse";
 import { useNavigate } from "react-router-dom";
+import { useFilter } from "@/contexts/FilterContext";
 
 type UploadState = "idle" | "parsing" | "success" | "error";
 
@@ -12,6 +13,7 @@ export const UploadPage = () => {
   const [rowCount, setRowCount] = useState(0);
   const [columns, setColumns] = useState<string[]>([]);
   const navigate = useNavigate();
+  const { isDemo, setIsDemo, setSelectedChannel } = useFilter();
 
   const handleFile = useCallback((file: File) => {
     setState("parsing");
@@ -24,9 +26,9 @@ export const UploadPage = () => {
         if (results.data.length > 0) {
           setRowCount(results.data.length);
           setColumns(results.meta.fields || []);
-          // Store in sessionStorage for dashboard
           sessionStorage.setItem("csv_data", JSON.stringify(results.data));
           sessionStorage.setItem("csv_columns", JSON.stringify(results.meta.fields));
+          setIsDemo(false);
           setState("success");
         } else {
           setState("error");
@@ -34,7 +36,7 @@ export const UploadPage = () => {
       },
       error: () => setState("error"),
     });
-  }, []);
+  }, [setIsDemo]);
 
   const handleDrop = useCallback((e: React.DragEvent) => {
     e.preventDefault();
@@ -46,6 +48,17 @@ export const UploadPage = () => {
     const file = e.target.files?.[0];
     if (file) handleFile(file);
   }, [handleFile]);
+
+  const handleClearDemo = () => {
+    sessionStorage.removeItem("csv_data");
+    sessionStorage.removeItem("csv_columns");
+    setIsDemo(false);
+    setSelectedChannel(null);
+    setState("idle");
+    setFileName("");
+    setRowCount(0);
+    setColumns([]);
+  };
 
   return (
     <div className="min-h-screen pb-24 px-4 pt-6">
@@ -157,13 +170,24 @@ export const UploadPage = () => {
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           transition={{ delay: 0.3 }}
-          className="mt-8"
+          className="mt-8 space-y-3"
         >
-          <p className="text-xs text-muted-foreground mb-3 uppercase tracking-wider font-medium">Ou use dados de exemplo</p>
+          {isDemo && (
+            <button
+              onClick={handleClearDemo}
+              className="w-full rounded-2xl border border-destructive/20 bg-destructive/5 py-3.5 text-sm font-medium text-destructive hover:bg-destructive/10 transition-colors active:scale-[0.98] flex items-center justify-center gap-2"
+            >
+              <Trash2 className="h-4 w-4" />
+              Retirar dados demo
+            </button>
+          )}
+
+          <p className="text-xs text-muted-foreground uppercase tracking-wider font-medium">Ou use dados de exemplo</p>
           <button
             onClick={() => {
               sessionStorage.removeItem("csv_data");
               sessionStorage.removeItem("csv_columns");
+              setIsDemo(true);
               navigate("/dashboard");
             }}
             className="w-full rounded-2xl border border-border bg-card py-3.5 text-sm font-medium text-foreground hover:bg-secondary transition-colors active:scale-[0.98]"

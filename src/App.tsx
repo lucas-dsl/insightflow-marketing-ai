@@ -4,6 +4,7 @@ import { Toaster as Sonner } from "@/components/ui/sonner";
 import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { BottomNav } from "@/components/BottomNav";
+import { FilterProvider } from "@/contexts/FilterContext";
 import { UploadPage } from "@/pages/UploadPage";
 import { DashboardPage } from "@/pages/DashboardPage";
 import { TrendsPage } from "@/pages/TrendsPage";
@@ -18,16 +19,18 @@ const App = () => (
       <Toaster />
       <Sonner />
       <BrowserRouter>
-        <div className="max-w-lg mx-auto">
-          <Routes>
-            <Route path="/" element={<UploadPage />} />
-            <Route path="/dashboard" element={<DashboardPage />} />
-            <Route path="/trends" element={<TrendsPage />} />
-            <Route path="/insights" element={<InsightsPage />} />
-            <Route path="*" element={<NotFound />} />
-          </Routes>
-          <BottomNav />
-        </div>
+        <FilterProvider>
+          <div className="max-w-lg mx-auto">
+            <Routes>
+              <Route path="/" element={<UploadPage />} />
+              <Route path="/dashboard" element={<DashboardPage />} />
+              <Route path="/trends" element={<TrendsPage />} />
+              <Route path="/insights" element={<InsightsPage />} />
+              <Route path="*" element={<NotFound />} />
+            </Routes>
+            <BottomNav />
+          </div>
+        </FilterProvider>
       </BrowserRouter>
     </TooltipProvider>
   </QueryClientProvider>
