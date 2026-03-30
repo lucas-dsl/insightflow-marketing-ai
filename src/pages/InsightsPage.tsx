@@ -12,7 +12,7 @@ export const InsightsPage = () => {
           <span className="gradient-primary text-primary-foreground text-[10px] font-bold px-2 py-0.5 rounded-full">IA</span>
         </div>
         <p className="text-sm text-muted-foreground mt-1">
-          Recomendações cruzando seus dados + tendências de mercado
+          Problemas detectados + oportunidades de mercado = ações estratégicas
         </p>
       </motion.div>
 
@@ -26,12 +26,12 @@ export const InsightsPage = () => {
         <div>
           <p className="text-sm font-medium text-foreground">{mockInsights.length} insights gerados</p>
           <p className="text-xs text-muted-foreground mt-0.5">
-            Baseado nos seus dados de campanha e tendências atuais de mercado. Toque para expandir cada recomendação.
+            Cada card cruza um problema real dos seus dados com uma tendência de mercado, gerando ação + ideia criativa.
           </p>
         </div>
       </motion.div>
 
-      <div className="mt-6 space-y-3">
+      <div className="mt-6 space-y-4">
         {mockInsights.map((insight, i) => (
           <InsightCard key={insight.id} insight={insight} index={i} />
         ))}

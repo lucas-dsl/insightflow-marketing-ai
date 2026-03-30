@@ -24,48 +24,62 @@ export const mockTrends = [
   { keyword: "influencer micro", interest: 59, change: +12, status: "rising" as const },
 ];
 
-export const mockInsights = [
+export interface InsightItem {
+  id: number;
+  problem: string;
+  trend: string;
+  action: string;
+  creative: string;
+  impact: "Alto" | "Médio" | "Baixo";
+  channels: string[];
+}
+
+export const mockInsights: InsightItem[] = [
   {
     id: 1,
-    type: "opportunity" as const,
-    title: "Aproveitar IA generativa em campanhas de email",
-    description: "Seus dados mostram alta taxa de abertura em emails personalizados (42%). Combine com a tendência de IA generativa para criar variações de copy automatizadas.",
+    problem: "CTR do Meta Ads caiu 18% no último mês",
+    trend: "\"UGC creator\" crescendo +34% no mercado",
+    action: "Testar 3 creators com vídeos curtos de 15s",
+    creative: "Criativo estilo rotina matinal + prova social com depoimento real",
     impact: "Alto",
-    effort: "Médio",
-    channels: ["Email", "Automação"],
-    actions: ["Implementar geração de assuntos com IA", "Teste A/B com 5 variações por segmento", "Personalizar CTAs por comportamento"],
+    channels: ["Meta Ads", "Instagram"],
   },
   {
     id: 2,
-    type: "test" as const,
-    title: "Teste A/B: Short-form video vs. carrossel no Meta",
-    description: "A tendência de short-form video está em alta (+21%). Seu CPL no Meta Ads pode reduzir 15-25% testando Reels vs. carrossel estático.",
+    problem: "Taxa de abertura de email caiu para 19%",
+    trend: "IA generativa para personalização em alta (+28%)",
+    action: "Implementar assuntos dinâmicos gerados por IA",
+    creative: "Série \"Seu resumo semanal\" com dados personalizados do lead",
     impact: "Alto",
-    effort: "Baixo",
-    channels: ["Meta Ads", "Instagram"],
-    actions: ["Criar 3 vídeos de 15s com gancho forte", "Manter carrossel como controle", "Rodar por 14 dias com budget igual"],
+    channels: ["Email", "Automação"],
   },
   {
     id: 3,
-    type: "optimization" as const,
-    title: "Realocação de budget: Google → Orgânico",
-    description: "Seu CPA em Google Ads subiu 18% nos últimos 3 meses. O tráfego orgânico tem CPA 3x menor. Invista em SEO + conteúdo.",
+    problem: "CPA do Google Ads subiu 22% em 3 meses",
+    trend: "SEO com conteúdo long-form ganhando tração (+15%)",
+    action: "Realocar 15% do budget para conteúdo orgânico",
+    creative: "Hub de conteúdo \"Guia definitivo\" com captura de lead integrada",
     impact: "Médio",
-    effort: "Alto",
-    channels: ["SEO", "Content"],
-    actions: ["Reduzir 15% do budget de Google Ads", "Criar 8 artigos otimizados/mês", "Focar em long-tail keywords do setor"],
+    channels: ["Google Ads", "SEO", "Content"],
   },
   {
     id: 4,
-    type: "campaign" as const,
-    title: "Campanha de social commerce com micro influenciadores",
-    description: "Tendência de social commerce + micro influenciadores convergem. Teste uma campanha integrada com checkout direto no Instagram.",
+    problem: "Conversão de landing page estagnada em 2.1%",
+    trend: "Social commerce com checkout nativo crescendo (+21%)",
+    action: "Ativar Instagram Shopping + micro influenciadores",
+    creative: "Campanha \"Compre direto do feed\" com unboxing de creators",
     impact: "Alto",
-    effort: "Médio",
     channels: ["Instagram", "TikTok"],
-    actions: ["Selecionar 10 micro influenciadores do nicho", "Criar códigos de desconto exclusivos", "Ativar Instagram Shopping"],
+  },
+  {
+    id: 5,
+    problem: "Leads frios representam 60% do pipeline",
+    trend: "Automação com scoring preditivo em alta (+18%)",
+    action: "Implementar lead scoring com base em engajamento",
+    creative: "Fluxo \"Reativação VIP\" com oferta exclusiva e countdown",
+    impact: "Médio",
+    channels: ["Email", "WhatsApp"],
   },
 ];
 
 export type CampaignRow = typeof mockCampaignData[0];
-export type InsightItem = typeof mockInsights[0];
